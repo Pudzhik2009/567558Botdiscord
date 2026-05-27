@@ -14,8 +14,6 @@ intents.message_content = True
 bot = discord.Client(intents=intents)
 tree = app_commands.CommandTree(bot)
 
-active_modals: set[int] = set()
-
 
 class AnketaModalPart2(Modal, title="Анкета — часть 2 из 2"):
     plans_season = TextInput(label="6. Ваши планы на текущий сезон", style=discord.TextStyle.paragraph, placeholder="Опишите ваши планы...", required=True, max_length=500)
@@ -36,7 +34,6 @@ class AnketaModalPart2(Modal, title="Анкета — часть 2 из 2"):
                 raise ValueError
         except ValueError:
             await interaction.response.send_message("❌ Ошибка: в поле «Оцените PvP-скиллы» нужно ввести **целое число от 1 до 10**.", ephemeral=True)
-            active_modals.discard(interaction.user.id)
             return
 
         try:
@@ -45,12 +42,14 @@ class AnketaModalPart2(Modal, title="Анкета — часть 2 из 2"):
                 raise ValueError
         except ValueError:
             await interaction.response.send_message("❌ Ошибка: в поле «Знание механик сервера» нужно ввести **целое число от 1 до 10**.", ephemeral=True)
-            active_modals.discard(interaction.user.id)
             return
 
         data = {**self.part1_data, "plans_season": self.plans_season.value, "activities": self.activities.value, "previous_guilds": self.previous_guilds.value, "other_projects": self.other_projects.value, "pvp_skill": pvp, "mechanics_skill": mechanics}
         view = MicrophoneView(data, interaction.user)
         await interaction.response.send_message("🎙️ **Последний шаг!**\nВыберите ответы на оставшиеся вопросы:", view=view, ephemeral=True)
+
+    async def on_error(self, interaction: discord.Interaction, error: Exception):
+        await interaction.response.send_message("❌ Произошла ошибка. Попробуйте ещё раз.", ephemeral=True)
 
 
 class AnketaModalPart1(Modal, title="Анкета — часть 1 из 2"):
@@ -67,7 +66,6 @@ class AnketaModalPart1(Modal, title="Анкета — часть 1 из 2"):
                 raise ValueError
         except ValueError:
             await interaction.response.send_message("❌ Ошибка: в поле «Возраст» нужно ввести **целое число**.", ephemeral=True)
-            active_modals.discard(interaction.user.id)
             return
 
         part1_data = {"nickname": self.nickname.value, "age": age_val, "hours_per_day": self.hours_per_day.value, "bans": self.bans.value, "season1": self.season1.value}
@@ -75,8 +73,7 @@ class AnketaModalPart1(Modal, title="Анкета — часть 1 из 2"):
         await interaction.response.send_modal(modal2)
 
     async def on_error(self, interaction: discord.Interaction, error: Exception):
-        active_modals.discard(interaction.user.id)
-        await interaction.response.send_message("❌ Произошла ошибка при обработке анкеты. Попробуйте ещё раз.", ephemeral=True)
+        await interaction.response.send_message("❌ Произошла ошибка. Попробуйте ещё раз.", ephemeral=True)
 
 
 class MicrophoneView(View):
@@ -115,7 +112,6 @@ class MicrophoneView(View):
         self.data["team_ready"] = self.team_value
         await interaction.response.defer(ephemeral=True)
         await send_application(interaction, self.data)
-        active_modals.discard(interaction.user.id)
         self.stop()
 
 
@@ -167,11 +163,6 @@ class ApplyView(View):
 
     @discord.ui.button(label="📝 Подать заявку", style=discord.ButtonStyle.success, custom_id="open_anketa")
     async def open_anketa(self, interaction: discord.Interaction, button: Button):
-        user_id = interaction.user.id
-        if user_id in active_modals:
-            await interaction.response.send_message("⚠️ У вас уже открыта анкета. Заполните или закройте её перед подачей новой.", ephemeral=True)
-            return
-        active_modals.add(user_id)
         modal = AnketaModalPart1()
         await interaction.response.send_modal(modal)
 
