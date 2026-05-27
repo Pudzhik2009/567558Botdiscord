@@ -47,7 +47,10 @@ class AnketaModalPart2(Modal, title="Анкета — часть 2 из 2"):
         await interaction.response.send_message("🎙️ **Последний шаг!**\nВыберите ответы на оставшиеся вопросы:", view=view, ephemeral=True)
 
     async def on_error(self, interaction: discord.Interaction, error: Exception):
-        await interaction.response.send_message("❌ Ошибка. Попробуйте ещё раз.", ephemeral=True)
+        try:
+            await interaction.response.send_message("❌ Ошибка. Попробуйте ещё раз.", ephemeral=True)
+        except:
+            pass
 
 
 class AnketaModalPart1(Modal, title="Анкета — часть 1 из 2"):
@@ -71,7 +74,10 @@ class AnketaModalPart1(Modal, title="Анкета — часть 1 из 2"):
         await interaction.response.send_modal(modal2)
 
     async def on_error(self, interaction: discord.Interaction, error: Exception):
-        await interaction.response.send_message("❌ Ошибка. Попробуйте ещё раз.", ephemeral=True)
+        try:
+            await interaction.response.send_message("❌ Ошибка. Попробуйте ещё раз.", ephemeral=True)
+        except:
+            pass
 
 
 class MicrophoneView(View):
@@ -116,7 +122,7 @@ class MicrophoneView(View):
 async def send_application(interaction: discord.Interaction, data: dict):
     channel = bot.get_channel(MODERATION_CHANNEL_ID)
     if channel is None:
-        await interaction.followup.send("❌ Канал не найден. Обратитесь к администратору.", ephemeral=True)
+        await interaction.followup.send("❌ Канал не найден.", ephemeral=True)
         return
 
     user = interaction.user
@@ -161,8 +167,7 @@ class ApplyView(View):
 
     @discord.ui.button(label="📝 Подать заявку", style=discord.ButtonStyle.success, custom_id="open_anketa")
     async def open_anketa(self, interaction: discord.Interaction, button: Button):
-        modal = AnketaModalPart1()
-        await interaction.response.send_modal(modal)
+        await interaction.response.send_modal(AnketaModalPart1())
 
 
 @bot.event
