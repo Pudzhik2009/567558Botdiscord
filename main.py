@@ -4,6 +4,7 @@ from discord.ui import Button, View, Modal, TextInput, Select
 
 TOKEN = os.environ["TOKEN"]
 MODERATION_CHANNEL_ID = int(os.environ["MODERATION_CHANNEL_ID"])
+APPLY_CHANNEL_ID = int(os.environ["APPLY_CHANNEL_ID"])
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -180,6 +181,20 @@ async def on_ready():
     bot.add_view(ApplyView())
     print(f"✅ Бот запущен как {bot.user} (ID: {bot.user.id})")
     print(f"📢 Канал для заявок: {MODERATION_CHANNEL_ID}")
+
+    # Отправляем сообщение с кнопкой при запуске
+    channel = bot.get_channel(APPLY_CHANNEL_ID)
+    if channel:
+        async for msg in channel.history(limit=20):
+            if msg.author == bot.user:
+                return
+        embed = discord.Embed(
+            title="📋 Анкета на вступление",
+            description="Хотите стать частью нашего сообщества?\n\nНажмите кнопку ниже, чтобы заполнить анкету.",
+            color=discord.Color.green(),
+        )
+        embed.set_footer(text="Заполните все поля честно и подробно.")
+        await channel.send(embed=embed, view=ApplyView())
 
 
 bot.run(TOKEN)
