@@ -37,7 +37,7 @@ class AnketaModal(Modal, title="Анкета на вступление"):
         }
         view = Part2View(data)
         await interaction.response.send_message(
-            "📋 **Часть 2 из 2** — заполните оставшиеся поля и нажмите **Отправить**:",
+            "📋 **Часть 2 из 2** — выберите все пункты (заявка отправится автоматически после последнего выбора):",
             view=view,
             ephemeral=True,
         )
@@ -50,76 +50,67 @@ class Part2View(View):
         self.mic_value = None
         self.team_value = None
         self.pvp_value = None
-        self.mechanics_value = None
         self.experience_value = None
 
-        mic_select = Select(placeholder="Наличие микрофона", options=[
+        mic_select = Select(placeholder="🎙️ Наличие микрофона", options=[
             discord.SelectOption(label="Да", value="да", emoji="🎙️"),
             discord.SelectOption(label="Нет", value="нет", emoji="🔇"),
         ], row=0)
         mic_select.callback = self.mic_callback
         self.add_item(mic_select)
 
-        team_select = Select(placeholder="Готовы играть в команде?", options=[
+        team_select = Select(placeholder="🤝 Готовы играть в команде?", options=[
             discord.SelectOption(label="Да", value="да", emoji="🤝"),
             discord.SelectOption(label="Нет", value="нет", emoji="🚫"),
         ], row=1)
         team_select.callback = self.team_callback
         self.add_item(team_select)
 
-        pvp_select = Select(placeholder="PvP-скилл (1-10)", options=[
-            discord.SelectOption(label=str(i), value=str(i)) for i in range(1, 11)
+        pvp_select = Select(placeholder="⚔️ PvP-скилл и знание механик (1-10)", options=[
+            discord.SelectOption(label=f"PvP: {i}, Механики: {i}", value=str(i)) for i in range(1, 11)
         ], row=2)
         pvp_select.callback = self.pvp_callback
         self.add_item(pvp_select)
 
-        mechanics_select = Select(placeholder="Знание механик (1-10)", options=[
-            discord.SelectOption(label=str(i), value=str(i)) for i in range(1, 11)
-        ], row=3)
-        mechanics_select.callback = self.mechanics_callback
-        self.add_item(mechanics_select)
-
-        experience_select = Select(placeholder="Сколько времени на сервере?", options=[
+        experience_select = Select(placeholder="🕐 Сколько времени на сервере?", options=[
             discord.SelectOption(label="Только зашёл", value="Только зашёл", emoji="🆕"),
             discord.SelectOption(label="Меньше недели", value="Меньше недели", emoji="📅"),
             discord.SelectOption(label="1–2 недели", value="1–2 недели", emoji="📆"),
             discord.SelectOption(label="1 месяц", value="1 месяц", emoji="🗓️"),
             discord.SelectOption(label="Несколько месяцев", value="Несколько месяцев", emoji="⏳"),
             discord.SelectOption(label="С 1 сезона", value="С 1 сезона", emoji="👑"),
-        ], row=4)
+        ], row=3)
         experience_select.callback = self.experience_callback
         self.add_item(experience_select)
 
     async def mic_callback(self, interaction: discord.Interaction):
         self.mic_value = interaction.data["values"][0]
         await interaction.response.defer()
+        await self.check_complete(interaction)
 
     async def team_callback(self, interaction: discord.Interaction):
         self.team_value = interaction.data["values"][0]
         await interaction.response.defer()
+        await self.check_complete(interaction)
 
     async def pvp_callback(self, interaction: discord.Interaction):
         self.pvp_value = int(interaction.data["values"][0])
         await interaction.response.defer()
-
-    async def mechanics_callback(self, interaction: discord.Interaction):
-        self.mechanics_value = int(interaction.data["values"][0])
-        await interaction.response.defer()
+        await self.check_complete(interaction)
 
     async def experience_callback(self, interaction: discord.Interaction):
         self.experience_value = interaction.data["values"][0]
         await interaction.response.defer()
+        await self.check_complete(interaction)
 
-    async def submit_callback(self, interaction: discord.Interaction):
-        if None in (self.mic_value, self.team_value, self.pvp_value, self.mechanics_value, self.experience_value):
-            await interaction.response.send_message("⚠️ Выберите ответы во всех выпадающих списках.", ephemeral=True)
+    async def check_complete(self, interaction: discord.Interaction):
+        if None in (self.mic_value, self.team_value, self.pvp_value, self.experience_value):
             return
         self.data["microphone"] = self.mic_value
         self.data["team_ready"] = self.team_value
         self.data["pvp_skill"] = self.pvp_value
-        self.data["mechanics_skill"] = self.mechanics_value
+        self.data["mechanics_skill"] = self.pvp_value
         self.data["experience"] = self.experience_value
-        await interaction.response.defer(ephemeral=True)
         await send_application(interaction, self.data)
         self.stop()
 
