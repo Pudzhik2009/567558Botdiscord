@@ -6,6 +6,8 @@ TOKEN = os.environ["TOKEN"]
 MODERATION_CHANNEL_ID = int(os.environ["MODERATION_CHANNEL_ID"])
 APPLY_CHANNEL_ID = int(os.environ["APPLY_CHANNEL_ID"])
 
+ZHITEL_ROLE_ID = 1488273194199548069
+
 intents = discord.Intents.default()
 intents.message_content = True
 
@@ -50,6 +52,7 @@ class Part2View(View):
         self.mic_value = None
         self.team_value = None
         self.pvp_value = None
+        self.mechanics_value = None
         self.experience_value = None
 
         mic_select = Select(placeholder="🎙️ Наличие микрофона", options=[
@@ -66,11 +69,17 @@ class Part2View(View):
         team_select.callback = self.team_callback
         self.add_item(team_select)
 
-        pvp_select = Select(placeholder="⚔️ PvP-скилл и знание механик (1-10)", options=[
-            discord.SelectOption(label=f"PvP: {i}, Механики: {i}", value=str(i)) for i in range(1, 11)
+        pvp_select = Select(placeholder="⚔️ PvP-скилл (1-10)", options=[
+            discord.SelectOption(label=str(i), value=str(i)) for i in range(1, 11)
         ], row=2)
         pvp_select.callback = self.pvp_callback
         self.add_item(pvp_select)
+
+        mechanics_select = Select(placeholder="🔧 Знание механик (1-10)", options=[
+            discord.SelectOption(label=str(i), value=str(i)) for i in range(1, 11)
+        ], row=3)
+        mechanics_select.callback = self.mechanics_callback
+        self.add_item(mechanics_select)
 
         experience_select = Select(placeholder="🕐 Сколько времени на сервере?", options=[
             discord.SelectOption(label="Только зашёл", value="Только зашёл", emoji="🆕"),
@@ -79,7 +88,7 @@ class Part2View(View):
             discord.SelectOption(label="1 месяц", value="1 месяц", emoji="🗓️"),
             discord.SelectOption(label="Несколько месяцев", value="Несколько месяцев", emoji="⏳"),
             discord.SelectOption(label="С 1 сезона", value="С 1 сезона", emoji="👑"),
-        ], row=3)
+        ], row=4)
         experience_select.callback = self.experience_callback
         self.add_item(experience_select)
 
@@ -98,18 +107,23 @@ class Part2View(View):
         await interaction.response.defer()
         await self.check_complete(interaction)
 
+    async def mechanics_callback(self, interaction: discord.Interaction):
+        self.mechanics_value = int(interaction.data["values"][0])
+        await interaction.response.defer()
+        await self.check_complete(interaction)
+
     async def experience_callback(self, interaction: discord.Interaction):
         self.experience_value = interaction.data["values"][0]
         await interaction.response.defer()
         await self.check_complete(interaction)
 
     async def check_complete(self, interaction: discord.Interaction):
-        if None in (self.mic_value, self.team_value, self.pvp_value, self.experience_value):
+        if None in (self.mic_value, self.team_value, self.pvp_value, self.mechanics_value, self.experience_value):
             return
         self.data["microphone"] = self.mic_value
         self.data["team_ready"] = self.team_value
         self.data["pvp_skill"] = self.pvp_value
-        self.data["mechanics_skill"] = self.pvp_value
+        self.data["mechanics_skill"] = self.mechanics_value
         self.data["experience"] = self.experience_value
         await send_application(interaction, self.data)
         self.stop()
@@ -145,7 +159,7 @@ async def send_application(interaction: discord.Interaction, data: dict):
     embed.add_field(name="🔧 Механики", value=f"`{'█' * data['mechanics_skill']}{'░' * (10 - data['mechanics_skill'])}` **{data['mechanics_skill']}/10**", inline=True)
     embed.set_footer(text=f"ID: {user.id}")
 
-    await channel.send("@Житель новая заявка!")
+    await channel.send(f"<@&{ZHITEL_ROLE_ID}> новая заявка!")
     msg = await channel.send(embed=embed)
     await msg.add_reaction("✅")
     await msg.add_reaction("❌")
