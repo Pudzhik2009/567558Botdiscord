@@ -51,6 +51,7 @@ class Part2View(View):
         self.team_value = None
         self.pvp_value = None
         self.mechanics_value = None
+        self.experience_value = None
 
         mic_select = Select(placeholder="Наличие микрофона", options=[
             discord.SelectOption(label="Да", value="да", emoji="🎙️"),
@@ -78,9 +79,16 @@ class Part2View(View):
         mechanics_select.callback = self.mechanics_callback
         self.add_item(mechanics_select)
 
-        submit_btn = Button(label="📨 Отправить анкету", style=discord.ButtonStyle.success, row=4)
-        submit_btn.callback = self.submit_callback
-        self.add_item(submit_btn)
+        experience_select = Select(placeholder="Сколько времени на сервере?", options=[
+            discord.SelectOption(label="Только зашёл", value="Только зашёл", emoji="🆕"),
+            discord.SelectOption(label="Меньше недели", value="Меньше недели", emoji="📅"),
+            discord.SelectOption(label="1–2 недели", value="1–2 недели", emoji="📆"),
+            discord.SelectOption(label="1 месяц", value="1 месяц", emoji="🗓️"),
+            discord.SelectOption(label="Несколько месяцев", value="Несколько месяцев", emoji="⏳"),
+            discord.SelectOption(label="С 1 сезона", value="С 1 сезона", emoji="👑"),
+        ], row=4)
+        experience_select.callback = self.experience_callback
+        self.add_item(experience_select)
 
     async def mic_callback(self, interaction: discord.Interaction):
         self.mic_value = interaction.data["values"][0]
@@ -98,14 +106,19 @@ class Part2View(View):
         self.mechanics_value = int(interaction.data["values"][0])
         await interaction.response.defer()
 
+    async def experience_callback(self, interaction: discord.Interaction):
+        self.experience_value = interaction.data["values"][0]
+        await interaction.response.defer()
+
     async def submit_callback(self, interaction: discord.Interaction):
-        if None in (self.mic_value, self.team_value, self.pvp_value, self.mechanics_value):
+        if None in (self.mic_value, self.team_value, self.pvp_value, self.mechanics_value, self.experience_value):
             await interaction.response.send_message("⚠️ Выберите ответы во всех выпадающих списках.", ephemeral=True)
             return
         self.data["microphone"] = self.mic_value
         self.data["team_ready"] = self.team_value
         self.data["pvp_skill"] = self.pvp_value
         self.data["mechanics_skill"] = self.mechanics_value
+        self.data["experience"] = self.experience_value
         await interaction.response.defer(ephemeral=True)
         await send_application(interaction, self.data)
         self.stop()
@@ -133,6 +146,7 @@ async def send_application(interaction: discord.Interaction, data: dict):
     embed.add_field(name="⏱️ Часов в день", value=data["hours_per_day"], inline=True)
     embed.add_field(name="🔨 Баны", value=data["bans"], inline=False)
     embed.add_field(name="📅 Планы и деятельность", value=data["plans"], inline=False)
+    embed.add_field(name="🕐 Опыт на сервере", value=data["experience"], inline=False)
     embed.add_field(name=f"{mic_icon} Микрофон", value=data["microphone"].capitalize(), inline=True)
     embed.add_field(name=f"{team_icon} Команда", value=data["team_ready"].capitalize(), inline=True)
     embed.add_field(name="\u200b", value="\u200b", inline=True)
@@ -140,6 +154,7 @@ async def send_application(interaction: discord.Interaction, data: dict):
     embed.add_field(name="🔧 Механики", value=f"`{'█' * data['mechanics_skill']}{'░' * (10 - data['mechanics_skill'])}` **{data['mechanics_skill']}/10**", inline=True)
     embed.set_footer(text=f"ID: {user.id}")
 
+    await channel.send("@Житель новая заявка!")
     msg = await channel.send(embed=embed)
     await msg.add_reaction("✅")
     await msg.add_reaction("❌")
@@ -182,7 +197,6 @@ async def on_ready():
     print(f"✅ Бот запущен как {bot.user} (ID: {bot.user.id})")
     print(f"📢 Канал для заявок: {MODERATION_CHANNEL_ID}")
 
-    # Отправляем сообщение с кнопкой при запуске
     channel = bot.get_channel(APPLY_CHANNEL_ID)
     if channel:
         async for msg in channel.history(limit=20):
